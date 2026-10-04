@@ -68,3 +68,12 @@ done
 if [ "$FOUND" -eq 0 ]; then
     echo "No patches generated."
 fi
+
+cd "$ROOT"
+
+echo
+echo "Resetting WorldGuard submodule back to base..."
+git -C "$WG" reset --hard "$BASE"
+
+echo
+echo "Done."
