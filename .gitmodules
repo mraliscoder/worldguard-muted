@@ -1,0 +1,4 @@
+[submodule "WorldGuard"]
+	path = WorldGuard
+	url = https://github.com/EngineHub/WorldGuard
+	branch = version/7.0.x
