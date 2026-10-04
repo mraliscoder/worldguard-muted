@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WG="$ROOT/WorldGuard"
 PATCHES="$ROOT/patches"
 
-BASE="4181ebfe364e6e99c87c1166cad7c5715e54553a"
+BASE="e42d8bcda767c1e57f6ca801d088535a9f0783b3"
 
 cd "$WG"
 
