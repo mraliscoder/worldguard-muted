@@ -40,15 +40,15 @@ jobs:
             WorldGuard/**/*.gradle*
             WorldGuard/**/gradle-wrapper.properties
 
-      - name: Make scripts executable
-        run: |
-          chmod +x scripts/*.sh
-          chmod +x WorldGuard/gradlew
-
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.sh
+          chmod +x WorldGuard/gradlew
 
       - name: Apply patches
         run: ./scripts/apply-patches.sh
@@ -60,14 +60,14 @@ jobs:
           git log -1 --oneline
 
           echo
-          echo "Recent commits:"
+          echo "Patch commits:"
           git log --oneline -10
 
-      - name: Build WorldGuard Bukkit
+      - name: Build WorldGuard
         working-directory: WorldGuard
-        run: ./gradlew :worldguard-bukkit:build --no-daemon
+        run: ./gradlew build --no-daemon
 
-      - name: Prepare release JAR
+      - name: Prepare distribution JAR
         shell: bash
         run: |
           set -euo pipefail
@@ -85,19 +85,20 @@ jobs:
             find WorldGuard/worldguard-bukkit/build/libs \
               -maxdepth 1 \
               -type f \
-              -name "*.jar" \
-              ! -name "*-sources.jar" \
-              ! -name "*-javadoc.jar" \
-              ! -name "*-dev.jar" \
-              ! -name "*-plain.jar" \
+              -name "*-dist.jar" \
               | head -n 1
           )"
 
           if [ -z "$JAR" ]; then
-            echo "No deployable WorldGuard Bukkit JAR found."
+            echo
+            echo "ERROR: WorldGuard distribution JAR (*-dist.jar) not found."
+            echo
+            echo "Contents of build/libs:"
+            ls -lah WorldGuard/worldguard-bukkit/build/libs || true
             exit 1
           fi
 
+          echo
           echo "Selected JAR:"
           echo "$JAR"
 
@@ -110,11 +111,9 @@ jobs:
 
           cp "$JAR" "dist/$OUTPUT"
 
-          echo "artifact_name=$OUTPUT" >> "$GITHUB_ENV"
-
           echo
           echo "Prepared:"
-          ls -lh dist/
+          ls -lh "dist/$OUTPUT"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -148,7 +147,9 @@ jobs:
           path: dist
 
       - name: Show release files
-        run: ls -lh dist/
+        run: |
+          echo "Release files:"
+          ls -lah dist/
 
       - name: Create GitHub Release
         env:
