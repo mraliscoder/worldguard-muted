@@ -1,0 +1,161 @@
+name: Build WorldGuard NoMessage
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+
+  pull_request:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            WorldGuard/**/*.gradle*
+            WorldGuard/**/gradle-wrapper.properties
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.sh
+          chmod +x WorldGuard/gradlew
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Apply patches
+        run: ./scripts/apply-patches.sh
+
+      - name: Show applied commits
+        working-directory: WorldGuard
+        run: |
+          echo "Current HEAD:"
+          git log -1 --oneline
+
+          echo
+          echo "Recent commits:"
+          git log --oneline -10
+
+      - name: Build WorldGuard Bukkit
+        working-directory: WorldGuard
+        run: ./gradlew :worldguard-bukkit:build --no-daemon
+
+      - name: Prepare release JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          echo "Available Bukkit JARs:"
+          find WorldGuard/worldguard-bukkit/build/libs \
+            -maxdepth 1 \
+            -type f \
+            -name "*.jar" \
+            -print
+
+          JAR="$(
+            find WorldGuard/worldguard-bukkit/build/libs \
+              -maxdepth 1 \
+              -type f \
+              -name "*.jar" \
+              ! -name "*-sources.jar" \
+              ! -name "*-javadoc.jar" \
+              ! -name "*-dev.jar" \
+              ! -name "*-plain.jar" \
+              | head -n 1
+          )"
+
+          if [ -z "$JAR" ]; then
+            echo "No deployable WorldGuard Bukkit JAR found."
+            exit 1
+          fi
+
+          echo "Selected JAR:"
+          echo "$JAR"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            OUTPUT="WorldGuard-NoMessage-${GITHUB_REF_NAME}.jar"
+          else
+            SHORT_SHA="${GITHUB_SHA::7}"
+            OUTPUT="WorldGuard-NoMessage-${SHORT_SHA}.jar"
+          fi
+
+          cp "$JAR" "dist/$OUTPUT"
+
+          echo "artifact_name=$OUTPUT" >> "$GITHUB_ENV"
+
+          echo
+          echo "Prepared:"
+          ls -lh dist/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldGuard-NoMessage
+          path: dist/*.jar
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Release
+    needs: build
+
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: WorldGuard-NoMessage
+          path: dist
+
+      - name: Show release files
+        run: ls -lh dist/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/*.jar \
+            --verify-tag \
+            --title "WorldGuard NoMessage ${GITHUB_REF_NAME}" \
+            --generate-notes

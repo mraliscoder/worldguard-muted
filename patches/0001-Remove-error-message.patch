@@ -1,0 +1,27 @@
+From 9e726c80f28ff8cd8eef807ba0ac8ca12dd31e53 Mon Sep 17 00:00:00 2001
+From: Eduard Ilin <me@edwardcode.net>
+Date: Sun, 4 Oct 2026 18:56:03 +1000
+Subject: [PATCH] Remove error message
+
+---
+ .../worldguard/bukkit/listener/RegionProtectionListener.java  | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/listener/RegionProtectionListener.java b/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/listener/RegionProtectionListener.java
+index 5351d08f..4342c19a 100644
+--- a/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/listener/RegionProtectionListener.java
++++ b/worldguard-bukkit/src/main/java/com/sk89q/worldguard/bukkit/listener/RegionProtectionListener.java
+@@ -122,10 +122,6 @@ private void tellErrorMessage(DelegateEvent event, Cause cause, Location locatio
+     }
+ 
+     static void formatAndSendDenyMessage(String what, LocalPlayer localPlayer, String message) {
+-        if (message == null || message.isEmpty()) return;
+-        message = WorldGuard.getInstance().getPlatform().getMatcher().replaceMacros(localPlayer, message);
+-        message = CommandUtils.replaceColorMacros(message);
+-        localPlayer.printRaw(message.replace("%what%", what));
+     }
+ 
+     /**
+-- 
+2.54.0 (Apple Git-157)
+
